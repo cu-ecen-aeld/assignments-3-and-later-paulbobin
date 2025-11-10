@@ -1,64 +1,48 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <dirent.h>
+#include <syslog.h>
 #include <sys/stat.h>
+#include <libgen.h>
+#include <fcntl.h>
+#include <unistd.h>
 
 int main(int argc, char *argv[])
 {
-    if (argc != 3)
+    openlog(NULL,0,LOG_USER);
+
+    if(argc != 3)
     {
-        printf("Usage: finder <directory> <searchstring>\n");
+        syslog(LOG_ERR, "Invalid number of arguments");
         return 1;
     }
 
-    char *dirpath = argv[1];
-    char *search = argv[2];
+    char *writefile = argv[1];
+    char *writestr = argv[2];
+    char *dir = dirname(strdup(writefile));
 
-    DIR *d = opendir(dirpath);
-    if (d == NULL)
+    struct stat s;
+    if(stat(dir, &s) != 0)
+        mkdir(dir, 0777);
+
+    int fd = open(writefile, O_WRONLY | O_CREAT | O_TRUNC, 0666);
+    if(fd < 0)
     {
-        printf("Error: %s is not a directory\n", dirpath);
+        syslog(LOG_ERR, "Error opening file %s", writefile);
         return 1;
     }
 
-    struct dirent *entry;
-    int filecount = 0;
-    int matchcount = 0;
-
-    while ((entry = readdir(d)) != NULL)
+    if(write(fd, writestr, strlen(writestr)) != (ssize_t)strlen(writestr))
     {
-        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
-            continue;
-
-        char filepath[500];
-        snprintf(filepath, sizeof(filepath), "%s/%s", dirpath, entry->d_name);
-
-        struct stat s;
-        stat(filepath, &s);
-        if (S_ISDIR(s.st_mode))
-            continue;
-
-        FILE *f = fopen(filepath, "r");
-        if (f == NULL) continue;
-
-        filecount++;
-
-        char line[500];
-        while (fgets(line, sizeof(line), f))
-        {
-            if (strstr(line, search) != NULL)
-                matchcount++;
-        }
-
-        fclose(f);
+        syslog(LOG_ERR, "Error writing string");
+        close(fd);
+        return 1;
     }
 
-    closedir(d);
+    syslog(LOG_DEBUG, "Writing %s to %s", writestr, writefile);
 
-    printf("The number of files are %d and the number of matching lines are %d\n",
-            filecount, matchcount);
-
+    close(fd);
+    closelog();
     return 0;
 }
 
