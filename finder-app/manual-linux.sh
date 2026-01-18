@@ -13,10 +13,11 @@ ARCH=arm64
 CROSS_COMPILE=aarch64-linux-gnu-
 SKIP_KERNEL_BUILD=false
 
-if [ -n "${SKIP_BUILD:-}" ]; then
-    echo "CI detected: skipping kernel build"
+if [ -v SKIP_BUILD ]; then
+    echo "SKIP_BUILD detected → skipping kernel build"
     SKIP_KERNEL_BUILD=true
 fi
+
 
 if [ $# -lt 1 ]
 then
@@ -39,8 +40,8 @@ if [ ! -e ${OUTDIR}/linux-stable/arch/${ARCH}/boot/Image ]; then
     echo "Checking out version ${KERNEL_VERSION}"
     git checkout ${KERNEL_VERSION}
 
-    #Kernel build steps here
 if [ "${SKIP_KERNEL_BUILD}" = false ]; then
+    echo "Building kernel"
     make ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} defconfig
     make -j$(nproc) ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} Image
     cp arch/${ARCH}/boot/Image ${OUTDIR}/Image
@@ -50,14 +51,16 @@ fi
 
 
 
+
 fi
 
 echo "Adding the Image in outdir"
 cp ${OUTDIR}/linux-stable/arch/${ARCH}/boot/Image ${OUTDIR}/Image
 if [ ! -f ${OUTDIR}/Image ]; then
-    echo "ERROR: Kernel Image missing at ${OUTDIR}/Image"
+    echo "ERROR: Missing kernel Image at ${OUTDIR}/Image"
     exit 1
 fi
+
 
 echo "Creating the staging directory for the root filesystem"
 cd "$OUTDIR"
