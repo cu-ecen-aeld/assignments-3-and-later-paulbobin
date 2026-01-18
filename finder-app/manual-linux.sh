@@ -13,11 +13,10 @@ ARCH=arm64
 CROSS_COMPILE=aarch64-linux-gnu-
 SKIP_KERNEL_BUILD=false
 
-if [ -v SKIP_BUILD ]; then
-    echo "SKIP_BUILD detected → skipping kernel build"
+SKIP_KERNEL_BUILD=false
+if env | grep -q "^SKIP_BUILD="; then
     SKIP_KERNEL_BUILD=true
 fi
-
 
 if [ $# -lt 1 ]
 then
@@ -30,25 +29,33 @@ fi
 mkdir -p ${OUTDIR}
 
 cd "$OUTDIR"
-if [ ! -d "${OUTDIR}/linux-stable" ]; then
-    #Clone only if the repository does not exist.
-	echo "CLONING GIT LINUX STABLE VERSION ${KERNEL_VERSION} IN ${OUTDIR}"
-	git clone ${KERNEL_REPO} --depth 1 --single-branch --branch ${KERNEL_VERSION}
-fi
-if [ ! -e ${OUTDIR}/linux-stable/arch/${ARCH}/boot/Image ]; then
+
+
+
+if [ "$SKIP_KERNEL_BUILD" = false ]; then
+    if [ ! -d "${OUTDIR}/linux-stable" ]; then
+        echo "CLONING GIT LINUX STABLE VERSION ${KERNEL_VERSION} IN ${OUTDIR}"
+        git clone ${KERNEL_REPO} --depth 1 --single-branch --branch ${KERNEL_VERSION}
+    fi
+
     cd linux-stable
     echo "Checking out version ${KERNEL_VERSION}"
     git checkout ${KERNEL_VERSION}
 
-if [ "${SKIP_KERNEL_BUILD}" = false ]; then
     echo "Building kernel"
     make ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} defconfig
     make -j$(nproc) ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} Image
+
     cp arch/${ARCH}/boot/Image ${OUTDIR}/Image
 else
     echo "Skipping kernel build (CI mode)"
 fi
 
+# Mandatory check (CI expects this)
+if [ ! -f "${OUTDIR}/Image" ]; then
+    echo "Missing kernel image at ${OUTDIR}/Image"
+    exit 1
+fi
 
 
 
