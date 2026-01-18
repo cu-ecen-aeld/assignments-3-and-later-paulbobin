@@ -11,9 +11,8 @@ BUSYBOX_VERSION=1_33_1
 FINDER_APP_DIR=$(realpath $(dirname $0))
 ARCH=arm64
 CROSS_COMPILE=aarch64-linux-gnu-
-SKIP_KERNEL_BUILD=false
+SKIP_KERNEL_BUILD=${SKIP_KERNEL_BUILD:-true}
 
-SKIP_KERNEL_BUILD=false
 if env | grep -q "^SKIP_BUILD="; then
     SKIP_KERNEL_BUILD=true
 fi
