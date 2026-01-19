@@ -3,6 +3,19 @@
 
 set -e
 set -u
+sudo apt-get update
+sudo apt-get install -y \
+    build-essential \
+    gcc-aarch64-linux-gnu \
+    bc \
+    bison \
+    flex \
+    libssl-dev \
+    libncurses5-dev \
+    libncursesw5-dev \
+    git \
+    cpio \
+    qemu-system-aarch64
 
 OUTDIR=/tmp/aeld
 KERNEL_REPO=git://git.kernel.org/pub/scm/linux/kernel/git/stable/linux-stable.git
@@ -11,7 +24,7 @@ BUSYBOX_VERSION=1_33_1
 FINDER_APP_DIR=$(realpath $(dirname $0))
 ARCH=arm64
 CROSS_COMPILE=aarch64-linux-gnu-
-SKIP_KERNEL_BUILD=${SKIP_KERNEL_BUILD:-true}
+SKIP_KERNEL_BUILD=false
 
 if env | grep -q "^SKIP_BUILD="; then
     SKIP_KERNEL_BUILD=true
