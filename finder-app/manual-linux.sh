@@ -5,26 +5,21 @@ set -e
 set -u
 echo "Checking finder app files..."
 
-FILES_TO_COPY=(
-    "${FINDER_APP_DIR}/writer"
+REQ_SRC_FILES=(
+    "${FINDER_APP_DIR}/writer.c"
     "${FINDER_APP_DIR}/finder.sh"
     "${FINDER_APP_DIR}/finder-test.sh"
     "${FINDER_APP_DIR}/conf/username.txt"
     "${FINDER_APP_DIR}/autorun-qemu.sh"
 )
 
-echo "Files list:"
-for f in "${FILES_TO_COPY[@]}"; do
-    echo " - $f"
-done
-
-for f in "${FILES_TO_COPY[@]}"; do
+for f in "${REQ_SRC_FILES[@]}"; do
+    echo " -> $f"
     if [ ! -e "$f" ]; then
-        echo "ERROR: File missing -> $f"
+        echo "ERROR: source file missing: $f"
         exit 1
     fi
 done
-
 echo "All required files exist"
 
 sudo apt-get update
@@ -100,10 +95,14 @@ sudo mknod -m 666 ${OUTDIR}/rootfs/dev/null c 1 3
 sudo mknod -m 600 ${OUTDIR}/rootfs/dev/console c 5 1
 
 # writer app
+echo "Building writer app"
 cd ${FINDER_APP_DIR}
 make clean
 make CROSS_COMPILE=${CROSS_COMPILE}
-
+if [ ! -e "${FINDER_APP_DIR}/writer" ]; then
+    echo "ERROR: writer binary not created"
+    exit 1
+fi
 echo "Copying finder app files..."
 
 cd ${OUTDIR}/rootfs/home
