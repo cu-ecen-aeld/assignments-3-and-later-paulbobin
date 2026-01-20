@@ -4,7 +4,7 @@
 set -e
 set -u
 echo "Checking finder app files..."
-
+FINDER_APP_DIR=$(realpath $(dirname $0))
 REQ_SRC_FILES=(
     "${FINDER_APP_DIR}/writer.c"
     "${FINDER_APP_DIR}/finder.sh"
@@ -38,7 +38,7 @@ KERNEL_VERSION=v5.15.163
 BUSYBOX_VERSION=1_33_1
 ARCH=arm64
 CROSS_COMPILE=aarch64-linux-gnu-
-FINDER_APP_DIR=$(realpath $(dirname $0))
+
 
 if [ $# -ge 1 ]; then
     OUTDIR=$1
