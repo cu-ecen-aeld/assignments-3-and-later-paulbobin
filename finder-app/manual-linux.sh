@@ -10,6 +10,7 @@ REQ_SRC_FILES=(
     "${FINDER_APP_DIR}/finder.sh"
     "${FINDER_APP_DIR}/finder-test.sh"
     "${FINDER_APP_DIR}/conf/username.txt"
+    "${FINDER_APP_DIR}/conf/assignment.txt"    
     "${FINDER_APP_DIR}/autorun-qemu.sh"
 )
 
@@ -112,6 +113,7 @@ cp -a ${FINDER_APP_DIR}/writer .
 cp -a ${FINDER_APP_DIR}/finder.sh .
 cp -a ${FINDER_APP_DIR}/finder-test.sh .
 cp -a ${FINDER_APP_DIR}/conf/username.txt conf/
+cp -a ${FINDER_APP_DIR}/conf/assignment.txt conf/
 cp -a ${FINDER_APP_DIR}/autorun-qemu.sh .
 
 echo "Copy done"
