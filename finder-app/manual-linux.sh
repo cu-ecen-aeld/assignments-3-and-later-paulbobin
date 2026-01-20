@@ -3,6 +3,29 @@
 
 set -e
 set -u
+echo "Checking finder app files..."
+
+FILES_TO_COPY=(
+    "${FINDER_APP_DIR}/writer"
+    "${FINDER_APP_DIR}/finder.sh"
+    "${FINDER_APP_DIR}/finder-test.sh"
+    "${FINDER_APP_DIR}/conf/username.txt"
+    "${FINDER_APP_DIR}/autorun-qemu.sh"
+)
+
+echo "Files list:"
+for f in "${FILES_TO_COPY[@]}"; do
+    echo " - $f"
+done
+
+for f in "${FILES_TO_COPY[@]}"; do
+    if [ ! -e "$f" ]; then
+        echo "ERROR: File missing -> $f"
+        exit 1
+    fi
+done
+
+echo "All required files exist"
 
 sudo apt-get update
 sudo apt-get install -y \
@@ -68,9 +91,9 @@ make ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} CONFIG_PREFIX=${OUTDIR}/rootfs 
 #SYSROOT=$(${CROSS_COMPILE}gcc -print-sysroot)
 SYSROOT=/usr/aarch64-linux-gnu
 cp ${SYSROOT}/lib/ld-linux-aarch64.so.1 ${OUTDIR}/rootfs/lib/
-cp ${SYSROOT}/lib/libc.so.6 ${OUTDIR}/rootfs/lib64/
-cp ${SYSROOT}/lib/libm.so.6 ${OUTDIR}/rootfs/lib64/
-cp ${SYSROOT}/lib/libresolv.so.2 ${OUTDIR}/rootfs/lib64/
+cp ${SYSROOT}/lib/libc.so.6 ${OUTDIR}/rootfs/lib/
+cp ${SYSROOT}/lib/libm.so.6 ${OUTDIR}/rootfs/lib/
+cp ${SYSROOT}/lib/libresolv.so.2 ${OUTDIR}/rootfs/lib/
 
 # device nodes
 sudo mknod -m 666 ${OUTDIR}/rootfs/dev/null c 1 3
@@ -81,15 +104,22 @@ cd ${FINDER_APP_DIR}
 make clean
 make CROSS_COMPILE=${CROSS_COMPILE}
 
-# copy app files
+echo "Copying finder app files..."
+
 cd ${OUTDIR}/rootfs/home
 mkdir -p conf
-cp ${FINDER_APP_DIR}/writer .
-cp ${FINDER_APP_DIR}/finder.sh .
-cp ${FINDER_APP_DIR}/finder-test.sh .
-cp ${FINDER_APP_DIR}/conf/username.txt conf/
-cp ${FINDER_APP_DIR}/autorun-qemu.sh .
 
+cp -a ${FINDER_APP_DIR}/writer .
+cp -a ${FINDER_APP_DIR}/finder.sh .
+cp -a ${FINDER_APP_DIR}/finder-test.sh .
+cp -a ${FINDER_APP_DIR}/conf/username.txt conf/
+cp -a ${FINDER_APP_DIR}/autorun-qemu.sh .
+
+echo "Copy done"
+echo "Verifying copied files in rootfs..."
+
+ls -l ${OUTDIR}/rootfs/home
+ls -l ${OUTDIR}/rootfs/home/conf
 # permissions
 cd ${OUTDIR}/rootfs
 sudo chown -R root:root .
