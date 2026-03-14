@@ -1,6 +1,4 @@
 *.o
-actions-runner/
-actions-runner
 writer
 Test_*_Runner.c
 build/
