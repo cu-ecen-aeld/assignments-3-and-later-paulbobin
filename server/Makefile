@@ -1,11 +1,14 @@
-CC ?= gcc
-CFLAGS ?= -Wall -Werror
-TARGET = aesdsocket
-all: $(TARGET)
-default: $(TARGET)
-$(TARGET): aesdsocket.c
-	$(CC) $(CFLAGS) -o $(TARGET) aesdsocket.c
+CC      = $(CROSS_COMPILE)gcc
+CFLAGS  = -Wall -Wextra -Werror -g
+TARGET  = aesdsocket
+SRCS    = aesdsocket.c
+ 
+.PHONY: all default clean
+ 
+all default: $(TARGET)
+ 
+$(TARGET): $(SRCS)
+	$(CC) $(CFLAGS) -o $@ $^
+ 
 clean:
 	rm -f $(TARGET)
-.PHONY: all default clean
-
