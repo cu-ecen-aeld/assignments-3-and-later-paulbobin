@@ -48,22 +48,26 @@ void daemonize()
     }
 }
 
+// Helper to send the full contents of the data file back to the client
 int send_datafile(int cfd)
 {
-    char buf[4096];
+    char buf[1024];
     int fd = open(DATAFILE, O_RDONLY);
-    if(fd < 0) return -1;
+    if (fd < 0) {
+        syslog(LOG_ERR, "Could not open datafile for reading: %s", strerror(errno));
+        return -1;
+    }
 
     ssize_t nr;
-    while((nr = read(fd, buf, sizeof(buf))) > 0){
+    while ((nr = read(fd, buf, sizeof(buf))) > 0) {
         ssize_t sent = 0;
-    while(sent < nr){
-            ssize_t n = send(cfd, buf + sent, (size_t)(nr - sent), 0);
-            if(n < 0){
-            close(fd);
+        while (sent < nr) {
+            ssize_t n = send(cfd, buf + sent, nr - sent, 0);
+            if (n <= 0) { // Error or connection closed
+                close(fd);
                 return -1;
             }
-        sent += n;
+            sent += n;
         }
     }
     close(fd);
@@ -76,60 +80,49 @@ void handle_client(int cfd, const char *ip)
     char *pkt = NULL;
     size_t pktlen = 0;
 
-    while(1){
-    ssize_t bytes = recv(cfd, recvbuf, sizeof(recvbuf), 0);
-
-        if(bytes < 0){
-        if(errno == EINTR) break;
-            syslog(LOG_ERR, "recieve error from %s", ip);
-        break;
+    while (1) {
+        ssize_t bytes = recv(cfd, recvbuf, sizeof(recvbuf), 0);
+        if (bytes < 0) {
+            syslog(LOG_ERR, "recv error: %s", strerror(errno));
+            break;
+        } else if (bytes == 0) {
+            break; // Connection closed by client
         }
 
-	if(bytes <= 0){
-	    if(pktlen > 0){
-		int fd = open(DATAFILE, O_CREAT|O_WRONLY|O_APPEND|O_SYNC, 0644);
-		if(fd >= 0){
-		    write(fd, pkt, pktlen);
-		    close(fd);
-		    send_datafile(cfd);
-		}
-	    }
-	    break;
-	}
-
-        char *tmp = realloc(pkt, pktlen + (size_t)bytes);
-        if(!tmp){
-        syslog(LOG_ERR, "realloc failed");
-            free(pkt);
-        pkt = NULL;
-            pktlen = 0;
-        break;
+        // Accumulate data into pkt
+        char *tmp = realloc(pkt, pktlen + bytes);
+        if (!tmp) {
+            syslog(LOG_ERR, "realloc failed");
+            break;
         }
-    pkt = tmp;
-        memcpy(pkt + pktlen, recvbuf, (size_t)bytes);
-    pktlen += (size_t)bytes;
+        pkt = tmp;
+        memcpy(pkt + pktlen, recvbuf, bytes);
+        pktlen += bytes;
 
-        if(memchr(pkt, '\n', pktlen) || bytes == 0)
-        {
-        int fd = open(DATAFILE, O_CREAT|O_WRONLY|O_APPEND|O_SYNC, 0644);
-            if(fd >= 0){
-            write(fd, pkt, pktlen);
+        // Check if we received a newline
+        if (memchr(recvbuf, '\n', bytes)) {
+            // Write the current accumulated packet to the file
+            int fd = open(DATAFILE, O_CREAT | O_WRONLY | O_APPEND, 0644);
+            if (fd >= 0) {
+                if (write(fd, pkt, pktlen) < 0) {
+                    syslog(LOG_ERR, "Write to datafile failed");
+                }
                 close(fd);
-        } else {
-                syslog(LOG_ERR, "open datafile failed");
-        }
 
-        free(pkt);
+                // Send the entire file contents back to the client
+                if (send_datafile(cfd) < 0) {
+                    syslog(LOG_ERR, "send_datafile failed for %s", ip);
+                }
+            } else {
+                syslog(LOG_ERR, "Could not open datafile for writing: %s", strerror(errno));
+            }
+
+            // Reset packet buffer for next packet on this same connection (if any)
+            free(pkt);
             pkt = NULL;
-        pktlen = 0;
-
-            if(send_datafile(cfd) < 0)
-            syslog(LOG_ERR, "send file failed for %s", ip);
-
-        break;
+            pktlen = 0;
         }
     }
-
     free(pkt);
 }
 
